@@ -3698,6 +3698,25 @@ def fmt_logged(seconds, short=False):
     return f"{hours} h {minutes:02d} min" if hours else f"{minutes} min"
 
 
+def fmt_clock(at):
+    """When farming happened, as this PC's clock shows it: 'HH:MM' in the local timezone, or ""
+    when the line has no time (written by an older version, or added by hand)."""
+    if type(at) not in (int, float) or not math.isfinite(at) or at <= 0:
+        return ""
+    try:
+        return time.strftime("%H:%M", time.localtime(at))
+    except (OverflowError, OSError, ValueError):        # (a hand-edited log can hold any number)
+        return ""
+
+
+def span_at(existing, new, pick):
+    """The earlier (min) / later (max) of two log lines' from_at / to_at, in seconds since 1970.
+    Values that aren't numbers are skipped: a line written by an older version has none, and a
+    hand edit can hold anything. None when neither side has a real time to keep."""
+    vals = [v for v in (existing, new) if type(v) in (int, float) and math.isfinite(v)]
+    return pick(vals) if vals else None
+
+
 APPROX = "≈"           # shown before a number worked out from a % alone: "≈15,429"
 
 
@@ -3773,8 +3792,8 @@ def notes_of(entries):
 
 
 def log_row(e, part=False):
-    """The log table's cells for an entry: Date, Map, Lv, Class, Party, Time, EXP/hr, Mesos/hr,
-    Net/hr, Note. `part`: one party size under a merged party line, so just its own numbers."""
+    """The log table's cells for an entry: Date, Map, Lv, Class, Party, From, To, Time, EXP/hr,
+    Mesos/hr, Net/hr, Note. `part`: one party size under a merged party line, so just its own numbers."""
     d = date.fromisoformat(e["date"])
     day = f"{MONTHS[d.month - 1]} {d.day}" + ("" if d.year == date.today().year else f" '{d.year % 100:02d}")
     level = e["level"] if e["level"] is not None else "?"
@@ -3785,8 +3804,10 @@ def log_row(e, part=False):
     mesos = f"{e['mesos'] / ms * 3600:,.0f}" if ms else ("?" if tracked else "")
     note = NOTE_MARK if note_of(e) else ""
     if part:
-        return "", "", "", "", party, fmt_logged(e["seconds"], short=True), exp, mesos, net_text(e), note
-    return (day, e["map"], level, e.get("class") or "", party, fmt_logged(e["seconds"], short=True), exp, mesos,
+        return ("", "", "", "", party, fmt_clock(e.get("from_at")), fmt_clock(e.get("to_at")),
+                fmt_logged(e["seconds"], short=True), exp, mesos, net_text(e), note)
+    return (day, e["map"], level, e.get("class") or "", party, fmt_clock(e.get("from_at")),
+            fmt_clock(e.get("to_at")), fmt_logged(e["seconds"], short=True), exp, mesos,
             net_text(e), note)
 
 
@@ -3809,6 +3830,14 @@ def merged(entries):
         m["estimated"] = True                    # (one estimated part makes the whole line an estimate)
     for k in ("exp", "seconds", "mesos", "mesos_seconds"):
         m[k] = sum(e.get(k) or 0 for e in entries)
+    for k, pick in (("from_at", min), ("to_at", max)):
+        acc = None
+        for e in entries:                         # (the line's From/To: the earliest start and latest end)
+            acc = span_at(acc, e.get(k), pick)
+        if acc is None:
+            m.pop(k, None)
+        else:
+            m[k] = acc
     if any("potion_cost" in e for e in entries):
         m["potion_cost"] = sum(e.get("potion_cost") or 0 for e in entries)
         m["potion_seconds"] = sum(e.get("potion_seconds", e["seconds"]) for e in entries if "potion_cost" in e)
@@ -3822,7 +3851,7 @@ def group_row(entries, is_open=False):
     row = list(log_row(merged(entries)))
     sizes = [e["party"] for e in entries]
     row[4] = f"{sizes[0]}–{sizes[-1]}ppl {'▾' if is_open else '▸'}"
-    row[9] = NOTE_MARK if notes_of(entries) else ""
+    row[11] = NOTE_MARK if notes_of(entries) else ""
     return tuple(row)
 
 
@@ -3997,6 +4026,7 @@ class AutoLog:
                     and optional("map_read", lambda v: isinstance(v, str), empty=True)
                     and optional("seal", lambda v: isinstance(v, str))
                     and optional("updated", number)
+                    and optional("from_at", number) and optional("to_at", number)
                     and optional("mesos", number) and optional("mesos_seconds", number)
                     and optional("potion_cost", lambda v: number(v) and v >= 0)
                     and optional("potion_seconds", lambda v: number(v) and v >= 0)
@@ -4114,10 +4144,11 @@ class AutoLog:
             cost = max(0, potions[1] - self.pot0[1])
             used = {n: c - self.pot0[0].get(n, 0) for n, c in potions[0].items() if c > self.pot0[0].get(n, 0)}
         several = len(self.block_maps) > 1
+        wall = time.time()                                  # the block's own time of day, for the log's From/To
         entry = self._add(self._maps_label(self.block_maps) if several else self.block_map or "Unknown map", level, party,
                           self.block_exp, now - self.start, meso_gain, meso_seconds, job,
                           self._maps_label(self.block_reads) if several else map_read or self.block_map, cost, used,
-                          self.block_estimated)
+                          self.block_estimated, from_at=round(wall - (now - self.start), 1), to_at=round(wall, 1))
         self.start, self.block_exp, self.block_estimated = now, 0, False       # the next 5 minutes start now
         self.block_maps, self.block_reads = [self.block_map] if self.block_map else [], [map_read or self.block_map] if self.block_map else []
         self.meso0 = mesos if mesos and now - mesos[1] < 10 else None
@@ -4330,7 +4361,7 @@ class AutoLog:
         return None if self.start is None else max(0.0, LOG_BLOCK - (now - self.start))
 
     def _add(self, map_name, level, party, exp, seconds, mesos, meso_seconds, job=None, map_read=None,
-             potion_cost=None, potions=None, estimated=False):
+             potion_cost=None, potions=None, estimated=False, from_at=None, to_at=None):
         def add():
             key = (date.today().isoformat(), map_name, level, party, job)
             for e in self.entries:
@@ -4351,6 +4382,10 @@ class AutoLog:
                         e["potions"] = used
                     if estimated:
                         e["estimated"] = True                # (not sealed: it only says how the EXP was got)
+                    for k, new, pick in (("from_at", from_at, min), ("to_at", to_at, max)):
+                        kept = span_at(e.get(k), new, pick)  # (the line's From/To stretch to cover this block too)
+                        if kept is not None:
+                            e[k] = kept
                     if "seal" in e:
                         self._reseal(e, ok)
                     break
@@ -4362,6 +4397,9 @@ class AutoLog:
                     e["potion_cost"], e["potions"], e["potion_seconds"] = potion_cost, dict(potions or {}), seconds
                 if estimated:
                     e["estimated"] = True
+                for k, new in (("from_at", from_at), ("to_at", to_at)):
+                    if type(new) in (int, float) and math.isfinite(new):
+                        e[k] = new
                 self._reseal(e, True)
                 self.entries.append(e)
             e["updated"] = time.time()
@@ -4442,6 +4480,10 @@ class AutoLog:
                         m["potions"] = {n: (m.get("potions") or {}).get(n, 0) + (e["potions"] or {}).get(n, 0)
                                         for n in {*(m.get("potions") or {}), *e["potions"]}}
                     m["updated"] = max(m.get("updated", 0), e.get("updated", 0))
+                    for k, pick in (("from_at", min), ("to_at", max)):      # (the combined line covers both lines' time)
+                        kept = span_at(m.get(k), e.get(k), pick)
+                        if kept is not None:
+                            m[k] = kept
                     if "seal" in m or "seal" in e:
                         self._reseal(m, ok)
                     both = notes_of([m, e])                   # a note on either line is kept
@@ -4833,6 +4875,7 @@ class App:
         columns = (("date", "Date", "Sep 30", "w"), ("map", "Map", "The Swamp of Despair II", "w"),
                    ("lv", "Lv", "99", "center"), ("class", "Class", "Crossbowman", "w"),
                    ("party", "Party", "2–6ppl ▸", "center"),
+                   ("from", "From", "23:59", "center"), ("to", "To", "23:59", "center"),
                    ("time", "Time", "12h 30m", "center"),
                    ("exp", "EXP/hr", "888,888", "e"), ("mesos", "Mesos/hr", "888,888", "e"),
                    ("net", "Net/hr", "888,888", "e"), ("note", "Note", NOTE_MARK, "center"))

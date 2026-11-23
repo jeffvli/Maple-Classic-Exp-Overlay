@@ -68,6 +68,9 @@ Click the **log icon** (top left, next to the status pill) to open the log. It's
 - **After 5 minutes of non-stop farming**, it adds a line for that map, your level and your party size.
 - **Every 5 more minutes** it updates that line, so the numbers get more accurate the longer you farm.
 - **Time** shows how long a line is based on. It grows by 5 minutes with each update.
+- **From / To** show when that line's farming ran, in **HH:MM** on your PC's own clock: **From** is the
+  start of the earliest 5-minute stretch on the line, **To** the end of the latest one. A line written by
+  an older version has no times and shows them blank.
 - **Class** is read from the status bar (never your character's name). Different classes get separate lines.
 - **15-minute runs:** under the log it also counts toward 15 minutes of non-stop farming on one map with the same party size ("15-min run: 7 of 15 min"). A level-up doesn't stop it; a break, a new map or a new party size starts it over. Finished runs are saved separately and, if you said yes, shared with the [best-maps site](#best-maps-for-your-class) (only clean ones, see there).
 - **Greyed-out lines** were changed outside the overlay. Every line the overlay writes is sealed, so a line edited or added by hand is easy to spot, and it won't count toward the best-maps site. Deleting a line, or renaming a map in the overlay, is fine.

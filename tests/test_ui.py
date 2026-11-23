@@ -91,7 +91,17 @@ def type_note(text):
 solo, group = row("Ant Tunnel I"), row("Wild Boar Land II", group=True)
 check("the log has a solo line and one shared party line", solo and group)
 check("the Note column is there, empty to begin with",
-      "note" in tree["columns"] and tree.item(solo, "values")[9] == "" and tree.item(group, "values")[9] == "")
+      "note" in tree["columns"] and tree.item(solo, "values")[11] == "" and tree.item(group, "values")[11] == "")
+solo_e = [e for e in app.autolog.entries if e["map"] == "Ant Tunnel I"][0]
+boars = [e for e in app.autolog.entries if e["map"] == "Wild Boar Land II"]
+check("From and To are the two columns left of Time, showing HH:MM of the line's own farming",
+      list(tree["columns"]).index("from") + 1 == list(tree["columns"]).index("to")
+      and list(tree["columns"]).index("to") + 1 == list(tree["columns"]).index("time")
+      and tree.item(solo, "values")[5:7] == (m.fmt_clock(solo_e["from_at"]), m.fmt_clock(solo_e["to_at"]))
+      and len(tree.item(solo, "values")[5]) == 5 and ":" in tree.item(solo, "values")[6])
+check("the merged party line spans all its party sizes' time",
+      tree.item(group, "values")[5:7] == (m.fmt_clock(min(e["from_at"] for e in boars)),
+                                          m.fmt_clock(max(e["to_at"] for e in boars))))
 check("with no line selected, the note box can't be typed in", str(box.cget("state")) == "disabled")
 
 # a solo line
@@ -102,7 +112,7 @@ type_note("Good drops, bring pots!")
 check("what's typed isn't saved at once (it waits for a pause)", on_disk()[("Ant Tunnel I", 1)] is None)
 pump(1.3)
 check("...but a moment later it's saved in the log file", on_disk()[("Ant Tunnel I", 1)] == "Good drops, bring pots!")
-check("...and the line gets its mark", tree.item(solo, "values")[9] == m.NOTE_MARK and "saved" in app.note_title.cget("text"))
+check("...and the line gets its mark", tree.item(solo, "values")[11] == m.NOTE_MARK and "saved" in app.note_title.cget("text"))
 
 # moving to another line saves the one left, and shows the other's note
 type_note(" More")
@@ -115,13 +125,13 @@ type_note("Pt of 4-5 works.\nKS-ing.")
 select(solo)
 check("a note on a shared party line goes on each party size", on_disk()[("Wild Boar Land II", 4)] == on_disk()[("Wild Boar Land II", 5)]
       == "Pt of 4-5 works.\nKS-ing.")
-check("...and shows on the shared line", tree.item(group, "values")[9] == m.NOTE_MARK)
+check("...and shows on the shared line", tree.item(group, "values")[11] == m.NOTE_MARK)
 tree.item(group, open=True)
 app._sync_group(group)
 child = tree.get_children(group)[0]
 select(child)
 check("opening it, each party size shows the same note", box.get("1.0", "end-1c") == "Pt of 4-5 works.\nKS-ing."
-      and tree.item(child, "values")[9] == m.NOTE_MARK)
+      and tree.item(child, "values")[11] == m.NOTE_MARK)
 
 # the log refreshes by itself every few minutes: that must not disturb a note being typed
 select(solo)
@@ -138,7 +148,7 @@ check("...and saved it first", on_disk()[("Ant Tunnel I", 1)] == before)
 app.autolog.rename(app.autolog.entries[[e["map"] for e in app.autolog.entries].index("Ant Tunnel I")], "Ant Tunnel One")
 app._fill_log()
 pump(0.2)
-check("renaming a map keeps its note", on_disk()[("Ant Tunnel One", 1)] == before and tree.item(row("Ant Tunnel One"), "values")[9] == m.NOTE_MARK)
+check("renaming a map keeps its note", on_disk()[("Ant Tunnel One", 1)] == before and tree.item(row("Ant Tunnel One"), "values")[11] == m.NOTE_MARK)
 check("...and the box goes empty (that line is gone under its old name)", str(box.cget("state")) == "disabled")
 
 # typing needs the hotkeys out of the way: Shift+1 is "!"
