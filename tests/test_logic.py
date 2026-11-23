@@ -1650,6 +1650,17 @@ PRICES = {"Red Potion": 50, "Orange Potion": 150, "Blue Potion": 220}
 check(f"mesos spent on potions: each kind at its own price, an item with no price costs 0 ({s.potions.cost(PRICES)})",
       s.potions.cost(PRICES) == 3 * 50 + 2 * 150 + 220)
 check("no prices at all costs nothing", s.potions.cost({}) == 0)
+# the per-item usage shown in the Details panel: count, and what each kind cost, dearest first
+_rows, _more = m.potion_use_rows(s.potions.used, PRICES)
+check(f"potion use rows: dearest first, with the count and the mesos ({_rows}, {_more} more)",
+      _rows == [("Orange Potion", 2, 300), ("Blue Potion", 1, 220), ("Red Potion", 3, 150)] and _more == 1)
+check(f"potion use text: count and cost, a free one without a cost ({m.potion_use_text({'Cider': 3}, {})})",
+      m.potion_use_text({"Cider": 3}, {}) == "Cider ×3")
+check("potion use text: the dearest are kept and the rest counted",
+      m.potion_use_text({"A": 1, "B": 2, "C": 3, "D": 4}, {"A": 900, "B": 500, "C": 200, "D": 100}, limit=2)
+      == "B ×2 (1,000)  ·  A ×1 (900) +2")
+check("potion use text: nothing used is a dash, and a zero count is no use",
+      m.potion_use_text({}, PRICES) == "—" and m.potion_use_text({"Red Potion": 0}, PRICES) == "—")
 
 # ---- potion counting rules (v2): stacks, layout flips, out of sight, drinking speed, money windows
 import potion_bar  # noqa: E402

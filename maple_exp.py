@@ -232,7 +232,7 @@ WHATS_NEW = {"0.9.16-beta": (
 PICTURE_WIDTHS = (430, 340, 250, 0)    # the What's new pictures' widths, biggest first (0: none), until the page fits the screen
 # Settings > Size, in %: only these, so the window can't get too small to read or use.
 UI_SCALES = (60, 70, 80, 90, 100, 110, 125, 150, 175, 200)
-MAIN_BIGGEST_PT = (272, 571)    # the main window at its biggest (full, Details open), in points: 362x761 px at Size 100%, Windows 100%
+MAIN_BIGGEST_PT = (272, 655)    # the main window at its biggest (full, Details open), in points: 362x873 px at Size 100%, Windows 100%
 SCREEN_ROOM_PT = 75             # what a window leaves free on its screen for the taskbar and a title bar, in points
 MAX_TRANSPARENCY = 40       # %: more and the window can fade out of sight, with Settings in it
 # For developers and AI coding agents working on a fork or a changed copy: mcwo.app takes shared runs, health
@@ -3712,6 +3712,25 @@ def net_text(e):
     return f"{e['mesos'] / ms * 3600 - e['potion_cost'] / ps * 3600:,.0f}"
 
 
+def potion_use_rows(used, prices, limit=3):
+    """The consumables used, dearest first: ([(name, count, mesos spent)], how many more there were).
+    used: {name: how many} (PotionTracker.used; a log line's "potions"); prices: {name: mesos} (Prices.mapping)."""
+    rows = sorted(((name, count, count * (prices or {}).get(name, 0))
+                   for name, count in (used or {}).items() if count > 0),
+                  key=lambda r: (-r[2], -r[1], r[0]))
+    return rows[:limit], max(0, len(rows) - limit)
+
+
+def potion_use_text(used, prices, limit=3):
+    """The "Potions used" row: 'Red Potion ×42 (2,100)  ·  Blue Potion ×8 (1,760) +2' — each count and what it
+    cost (left off for a free one), dearest first, and how many kinds didn't fit. "—" when nothing was used."""
+    rows, more = potion_use_rows(used, prices, limit)
+    parts = [f"{name} ×{count}" + (f" ({cost:,})" if cost else "") for name, count, cost in rows]
+    if more:
+        parts[-1] = f"{parts[-1]} +{more}"
+    return "  ·  ".join(parts) if parts else "—"
+
+
 def format_entry(e):
     """e.g. 'Oct 8th, 2026 - Rocky Road II - Lv 27 - Bandit - Solo - 15,429exp/hr - 3,210mesos/hr - 25 min'"""
     d = date.fromisoformat(e["date"])
@@ -4679,6 +4698,9 @@ class App:
         self.settings_win = self.prices_win = None
         self._price_table = None
         self._potion_unseen = None          # since when (monotonic) tracking runs and the potion bar isn't in sight
+        self._use_texts = None              # (session, today) consumables used, worked out every few seconds
+        self._use_texts_at = 0.0
+        self._use_key = None                # what it was worked out from (a session use shows at once)
         self._bar_unseen_since = None       # since when the potion bar hasn't been seen, tracking or not (bug reports)
         self.q = queue.Queue()
         self.stop_evt = threading.Event()
@@ -6422,6 +6444,29 @@ class App:
             return cost
         return f"{cost}  ·  {hint}" if cost != "0" else hint
 
+    def _potion_use_texts(self):
+        """(the consumables used this session, the same for today from the log), for the Details panel.
+        Worked out at most every few seconds: the log can hold many lines and this is asked for twice a second."""
+        if not self.cfg["potions_on"]:
+            return "—", "—"
+        now = time.monotonic()
+        key = (len(self.autolog.entries), tuple(sorted(self.session.potions.used.items())))
+        if self._use_key != key or now - self._use_texts_at >= 2.0:
+            self._use_key = key
+            prices = self._prices().mapping()
+            today = {}
+            for e in self.autolog.entries:
+                if e.get("date") != date.today().isoformat():
+                    continue
+                for name, count in (e.get("potions") or {}).items():
+                    if isinstance(count, int) and count > 0:      # (a hand-edited log line is no use count)
+                        today[name] = today.get(name, 0) + count
+            # (two items and how many kinds are left: these rows have a line of their own, about 296 px of bold text)
+            self._use_texts = (potion_use_text(self.session.potions.used, prices, limit=2),
+                               potion_use_text(today, prices, limit=2))
+            self._use_texts_at = now
+        return self._use_texts
+
     def _prices(self):
         table = self._potion_table()
         return potions.Prices(table.prices if table else {}, self.cfg["potion_prices"])
@@ -6444,6 +6489,7 @@ class App:
             mesos = fmt_num(m.value) + (f"  (+{fmt_short(m.gained)})" if m.gained > 0 else "")
         state, state_text = self._state()
         net = self._net(el)[0]
+        used_now, used_today = self._potion_use_texts()
         est = lambda text: APPROX + text if t.estimated and text and text != "\u2014" else text     # (worked out from a % alone)
         self.view.show(
             rate=approx_num(rate, t.estimated) if rate is not None else None,
@@ -6460,6 +6506,7 @@ class App:
                      "Current": (APPROX if t.percent_mode else "") + f"{fmt_num(shown[0])} [{shown[1]:.2f}%]" if shown else "\u2014",
                      "Mesos": mesos, "Mesos / 5 min": fmt_num(m.per_5min(el)),
                      "Potion cost": self._potion_cost_text(now),
+                     "Potions used": used_now, "Potions today": used_today,
                      "Net mesos / hr": net,
                      "Left out": (f"+{fmt_short(m.left_out[0])} / -{fmt_short(m.left_out[1])}"
                                   if any(m.left_out) else "—")},
@@ -6955,6 +7002,7 @@ class App:
         return {"on": True, "seen": bar.seen, "unseen_for": now - unseen if unseen and not bar.seen else None,
                 "layout": bar.layout, "mode": bar.mode, "scale": round(bar.scale, 2) if bar.scale else None,
                 "cost_text": self._potion_cost_text(now), "slots": slots,
+                "used": {n: c for n, c in self.session.potions.used.items() if n in shipped and c > 0},
                 "own_prices": sorted(n for n in self.cfg["potion_prices"] if n in shipped)}
 
     def _worker_alive(self):

@@ -400,24 +400,36 @@ class Tile(tk.Canvas):
 
 
 class Details(tk.Canvas):
-    """The rest of the numbers, one line each, for when you want them."""
+    """The rest of the numbers, one line each, for when you want them.
+
+    A label in `wide` gets a second line of its own for the value, left aligned, so a list of things (what potions
+    were used) has the whole panel's width instead of what a right-aligned value beside its label leaves over.
+    """
 
     ROW = 28
 
-    def __init__(self, parent, theme, labels, bg=INK):
-        self.t, self.labels = theme, labels
+    def __init__(self, parent, theme, labels, bg=INK, wide=()):
+        self.t, self.labels, self.wide = theme, labels, set(wide)
         g = theme.gfx
-        h = 14 + self.ROW * len(labels)
+        heights = [(name, self.ROW * (2 if name in self.wide else 1)) for name in labels]
+        h = 14 + sum(height for _, height in heights)
         super().__init__(parent, width=g.px(INNER), height=g.px(h), bg=bg, highlightthickness=0, bd=0)
         self._photo = g.photo(g.panel(g.px(INNER), g.px(h), 14, "#191c25", "#13151b", 0.09))
         self.create_image(0, 0, anchor="nw", image=self._photo)
         self._vals = {}
-        for i, name in enumerate(labels):
-            y = g.px(7 + i * self.ROW + self.ROW / 2)
-            self.create_text(g.px(16), y, anchor="w", text=name, fill=TEXT_DIM, font=theme.font("regular", 12))
-            self._vals[name] = self.create_text(g.px(INNER - 16), y, anchor="e", text="—", fill=TEXT, font=theme.font("bold", 12.5))
+        top = 7
+        for i, (name, height) in enumerate(heights):
+            if name in self.wide:
+                self.create_text(g.px(16), g.px(top + 8), anchor="w", text=name, fill=TEXT_DIM, font=theme.font("regular", 12))
+                self._vals[name] = self.create_text(g.px(16), g.px(top + self.ROW + 3), anchor="w", text="—", fill=TEXT,
+                                                    font=theme.font("bold", 12.5))
+            else:
+                y = g.px(top + height / 2)
+                self.create_text(g.px(16), y, anchor="w", text=name, fill=TEXT_DIM, font=theme.font("regular", 12))
+                self._vals[name] = self.create_text(g.px(INNER - 16), y, anchor="e", text="—", fill=TEXT, font=theme.font("bold", 12.5))
             if i:
-                self.create_line(g.px(14), g.px(7 + i * self.ROW), g.px(INNER - 14), g.px(7 + i * self.ROW), fill="#232733")
+                self.create_line(g.px(14), g.px(top), g.px(INNER - 14), g.px(top), fill="#232733")
+            top += height
 
     def set(self, name, value):
         value = self._fit(name, value)
@@ -425,9 +437,10 @@ class Details(tk.Canvas):
             self.itemconfigure(self._vals[name], text=value)
 
     def _fit(self, name, value):
-        """The value cut with an ellipsis so it never runs into its label."""
+        """The value cut with an ellipsis so it never runs into its label (or off a wide row's own line)."""
         g, font = self.t.gfx, self.t.font("bold", 12.5)
-        room = g.px(INNER - 32) - self.t.font("regular", 12).measure(name) - g.px(12)
+        room = g.px(INNER - 32) if name in self.wide else (
+            g.px(INNER - 32) - self.t.font("regular", 12).measure(name) - g.px(12))
         if font.measure(value) <= room:
             return value
         while value and font.measure(value + "…") > room:
@@ -743,7 +756,9 @@ class MainView(tk.Frame):
                                size=12, weight="semibold", command=self._toggle_details, bg=bg)
         self.more_btn.grid(row=3, column=0, padx=g.px(SIDE), pady=pad(0, 4))
         self.details_open = details
-        self.details = Details(self, theme, ("% / hr", "Gained", "Current", "Mesos", "Mesos / 5 min", "Potion cost", "Net mesos / hr", "Left out"), bg)
+        self.details = Details(self, theme, ("% / hr", "Gained", "Current", "Mesos", "Mesos / 5 min", "Potion cost",
+                                            "Potions used", "Potions today", "Net mesos / hr", "Left out"), bg,
+                               wide=("Potions used", "Potions today"))
         self.details.grid(row=4, column=0, padx=g.px(SIDE), pady=pad(0, 8))
         if not details:
             self.details.grid_remove()

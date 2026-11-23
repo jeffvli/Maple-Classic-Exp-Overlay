@@ -29,6 +29,11 @@ def check(name, ok):
     failures += not ok
 
 
+def ascii_ok(text):
+    """A panel value fit to print on a console that isn't UTF-8 (cp932 has no "·")."""
+    return text.replace("·", "|").replace("×", "x").replace("—", "-")
+
+
 def farm(log, t0, seconds, party=1, map_name="Rocky Road II", level=27):
     t, nxt = t0, t0
     while t < t0 + seconds:
@@ -920,8 +925,26 @@ if app.view.details_open:
 app.cfg["ui_scale"] = 100
 app._apply_ui_scale()
 check(f"nothing sticks out of the main window at any size, shape or mode ({box_bad[:3]})", not box_bad)
+app._update_display()                        # (the panel is new after the resize above: fill it)
+root.update()
 shown = app.view.details.itemcget(app.view.details._vals["Potion cost"], "text")
 check("a long potion hint is cut with an ellipsis instead of running into its label", shown.endswith("…") or len(shown) < 20)
+used_row = app.view.details.itemcget(app.view.details._vals["Potions used"], "text")
+check(f"the Details panel lists what was actually used, with its count ({ascii_ok(used_row)})",
+      used_row.startswith("Mana Elixir ×1"))
+today_row = app.view.details.itemcget(app.view.details._vals["Potions today"], "text")
+check(f"...and what today's log lines say was used ({ascii_ok(today_row)})", today_row == "—")
+line = {"date": m.date.today().isoformat(), "map": "Rocky Road II", "level": 27, "party": 1, "class": "Bandit",
+        "exp": 1, "seconds": 300, "mesos": 0, "mesos_seconds": 300, "potion_seconds": 300, "potion_cost": 3100,
+        "potions": {"Red Potion": 40, "Blue Potion": 5}}                      # (today's logged use, from the potions dict)
+app.autolog.entries.append(line)
+app._use_texts = None
+app._update_display()
+root.update()
+today_row = app.view.details.itemcget(app.view.details._vals["Potions today"], "text")
+app.autolog.entries.remove(line)
+check(f"the Potions today row adds up today's log lines, dearest first ({ascii_ok(today_row)})",
+      today_row == "Red Potion ×40 (2,000)  ·  Blue Potion ×5 (1,100)")
 app.session.potions.reset()
 app.cfg["potions_on"] = False
 

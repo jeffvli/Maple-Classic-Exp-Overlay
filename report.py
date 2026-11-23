@@ -163,6 +163,9 @@ def potion_lines(p):
         if s.get("kind") != "consumable":
             others[s.get("kind") or "unknown"] = others.get(s.get("kind") or "unknown", 0) + 1
     out.append(_kv("Other slots", ", ".join(f"{k} {n}" for k, n in sorted(others.items())) or "none"))
+    out.append(_kv("Used this session", ", ".join(f"{n} x{c}" for n, c in
+                                               sorted((p.get("used") or {}).items(), key=lambda kv: (-kv[1], kv[0])))
+                 or "none"))
     out.append(_kv("Shipped items with your own price", ", ".join(p.get("own_prices") or []) or "none"))
     return out
 

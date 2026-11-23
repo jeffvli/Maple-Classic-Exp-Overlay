@@ -110,6 +110,7 @@ Mesos/hr is what you pick up. **Net mesos/hr** takes off what the potions you dr
 - **Both bar styles work:** the keyboard bar and the controller bar (Standard or Cross-Style), with the game's UI Size on Default or Ideal. The overlay recognises which one you have by itself, and you can switch between them while it runs.
 - **If the cost isn't shown,** the overlay says why instead of showing 0: "Potion bar not seen" (it hasn't seen the bar for a minute, for example because something covers it), or "No price for: …" (a potion it counted has no price yet; type one under **Prices**).
 - **It counts only while tracking.** Paused or in town, nothing counts. Picking up or buying more potions is never counted as using them.
+- **What you used is listed** under **Details**: **Potions used** (this run, dearest first, with what each kind cost) and **Potions today** (the same, added up from today's log lines). Reset starts the first one over; the second follows your log.
 - **Prices are the NPC shop prices.** Potions no NPC sells count as free until you type what you pay, in ⚙ under **Settings > Potions > Prices**. You can change shop prices there too.
 - **Don't want it?** Switch it off under **Settings > Potions**. Nothing is counted and no net is shown.
 - **Your potion data never leaves your PC.** It isn't sent to the best-maps website.
