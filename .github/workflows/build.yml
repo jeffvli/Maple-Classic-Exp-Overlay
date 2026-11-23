@@ -142,7 +142,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [macos-15, macos-15-intel]     # Apple Silicon, Intel (pinned: macos-latest moves)
+        runner: [macos-26, macos-26-intel]   # Apple Silicon, Intel (pinned: macos-latest moves; macOS 14 images are
+                                             # retired, and macos-15 arm64 hosts stopped being assigned: actions/runner-images#15291)
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     permissions:
