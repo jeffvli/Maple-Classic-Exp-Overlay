@@ -140,7 +140,7 @@ DEFAULTS = {"gap_seconds": 15, "transparency": 0, "topmost": True,
             "details": False, "compact_shape": "square", "seen_version": "",
             "potions_on": True, "potion_prices": {}, "shadow_reader": True, "no_reset": False}
 SHAPE_LABELS = {"square": "Square", "wide": "Wide", "bar": "Bar"}
-SHAPE_BLURBS = {"square": "The narrow card: the big number, the level bar and Start/Pause.",
+SHAPE_BLURBS = {"square": "The narrow card: the big number, the level bar and Start/Stop.",
                 "wide": "Longer sideways: the level bar on top and four numbers in a row.",
                 "bar": "One thin strip with the main numbers and a slim level bar."}
 # What's new, shown once after updating to a version (plain words, newest changes only). A version with no entry shows nothing.
@@ -155,7 +155,11 @@ WHATS_NEW = {"0.9.16-beta": (
         "if a number looks off.",
         ("head", "A Mac download, as a test"),
         "There's now a Mac download (Apple Silicon and Intel). I don't have a Mac, so I haven't tested it myself: "
-        "if you try it, tell me if it works.")),),
+        "if you try it, tell me if it works.",
+        ("head", "The button isn't called Pause anymore"),
+        "It never just paused: pressing it ends the run going on, and your next EXP gain starts a new one. So it now "
+        "says Start, Stop and Continue, and the pill says Stopped (grey) when you stopped it. Paused (orange) is kept "
+        "for when the overlay pauses itself, because it carries on by itself at your next EXP gain.")),),
     "0.9.15-beta": (
     (None, None, (
         ("head", "EXP and party size, read the new way"),
@@ -543,7 +547,12 @@ def post_health(body, timeout=15):
 # Shift+1 to 4 by default (changeable in Settings). How they're caught is up to the OS
 # (PLATFORM.create_hotkeys); they're only on while MapleStory or the overlay is in front.
 
-HOTKEY_ACTIONS = {"start": "Start / Pause", "reset": "Reset", "skip": "Don't log", "compact": "Compact",
+# The one button that starts and stops tracking. It is deliberately not called Pause: pressing it while a run
+# is going ends that run (the numbers on screen stay, the run in progress is dropped, and the next EXP gain
+# starts a new one), so Start -> Stop -> Continue says what pressing it does. Reset is what zeroes the numbers.
+BTN_START, BTN_STOP, BTN_CONTINUE = "Start", "Stop", "Continue"
+
+HOTKEY_ACTIONS = {"start": "Start / Stop", "reset": "Reset", "skip": "Don't log", "compact": "Compact",
                   "no_reset": "No Reset"}
 DEFAULT_HOTKEYS = {"start": "Shift+1", "reset": "Shift+2", "skip": "Shift+3", "compact": "Shift+4", "no_reset": ""}
 NO_RESET_ON = ("No Reset is on: changing maps or going AFK won't start new numbers. "
@@ -3558,11 +3567,13 @@ class MesoTracker:
 class Session:
     """What's on screen: EXP and mesos since Start, and when tracking pauses by itself.
 
-    After Start it tracks until Pause is pressed, except that it pauses by itself when no
+    After Start it tracks until Stop is pressed, except that it pauses by itself when no
     EXP comes in for `gap` seconds or you leave the map, and carries on at the next EXP
     gain: from zero if that's on a different map, so the numbers are always for the map
-    you're on. With `no_reset` (farming across maps) a map change neither pauses nor starts
-    new numbers, and a hidden map name doesn't pause either: only Pause, Reset and the idle
+    you're on. Stop is not a break: these numbers stay (only Reset zeroes them) and Continue
+    starts counting again, but the run the log was building is dropped, so the next gain
+    begins a new run. With `no_reset` (farming across maps) a map change neither pauses nor starts
+    new numbers, and a hidden map name doesn't pause either: only Stop, Reset and the idle
     pause still apply. Time spent paused never counts, and an idle pause rewinds the clock to the
     last EXP gain. The gain that ends a pause starts the clock again rather than counting,
     just like a log stretch's first gain.
@@ -3572,7 +3583,7 @@ class Session:
         self.exp, self.meso = ExpTracker(), MesoTracker()
         self.potions = potions.PotionTracker()
         self.gap = gap
-        self.on = False             # Start was pressed (and Pause wasn't)
+        self.on = False             # Start was pressed (and Stop wasn't)
         self.waiting = None         # paused by itself: "idle" or "map"
         self.map = None             # the map these numbers are for
         self.here = None            # the map you're on now
@@ -4967,7 +4978,7 @@ class App:
     # ---- compact mode and size
     def set_compact(self, on):
         """Compact mode: just EXP/hr, when you'll level, the last 5 minutes and mesos/hr on one
-        line, and Start/Pause, in a much smaller window. The Compact button (it says Full in
+        line, and Start/Stop, in a much smaller window. The Compact button (it says Full in
         compact mode), Shift+4, or double-clicking the big number switches it."""
         self.compact = self.cfg["compact"] = on
         if on and self.log_open:
@@ -5308,7 +5319,8 @@ class App:
         if self.skip_log:
             return f"{where}\nNot logging this run."
         if not self.session.on:
-            return f"{where}\nPress Start to log EXP/hr here."
+            # (numbers on screen: pressing the button carries them on; a fresh session starts logging)
+            return f"{where}\nPress {BTN_CONTINUE if self.tracker.elapsed() > 0 else BTN_START} to log EXP/hr here."
         if self.session.waiting:
             return f"{where}\nPaused. Logging carries on at your next EXP gain."
         left = self.autolog.seconds_left(now)
@@ -6382,7 +6394,8 @@ class App:
             how = f" Estimated from the % (the bar shows no number; your level was {where})." if t.percent_mode else ""
             return ("Tracking your EXP. Not logging this run." if self.skip_log else "Tracking your EXP.") + how
         if t.elapsed() > 0:
-            return "Paused. Press Resume to carry on."
+            return ("Stopped. Your numbers are kept. Press Continue to track again: the next EXP gain "
+                    "starts a new run.")
         return "Ready. Press Start when you begin farming."
 
     def _name_hidden(self):
@@ -6435,10 +6448,12 @@ class App:
         if self.cfg["no_reset"]:                     # (instead of the level: it's in the big card anyway)
             if t.running:
                 return "tracking", "Tracking \u00b7 No Reset"
-            return ("paused", "Paused \u00b7 No Reset") if t.elapsed() > 0 else ("ready", "Ready \u00b7 No Reset")
+            return ("stopped", "Stopped \u00b7 No Reset") if t.elapsed() > 0 else ("ready", "Ready \u00b7 No Reset")
         if t.running:
             return "tracking", f"Tracking \u00b7 Lv {self.level}" if self.level else "Tracking"
-        return ("paused", "Paused") if t.elapsed() > 0 else ("ready", "Ready")
+        # (numbers on screen but nothing counting: you pressed Stop; "Paused" above is the overlay's own pause,
+        # which carries on by itself)
+        return ("stopped", "Stopped") if t.elapsed() > 0 else ("ready", "Ready")
 
     def _potion_table(self):
         """The shipped item table, for prices (the reader loads its own copy at the first look at the bar)."""
@@ -6571,8 +6586,9 @@ class App:
     # ---- buttons
     def _hotkey(self, action):
         if action == "start":
+            kept = self.tracker.elapsed() > 0        # (numbers on screen: the press carries them on)
             self.toggle()
-            done = "started" if self.session.on else "paused"
+            done = "stopped" if not self.session.on else ("continued" if kept else "started")
         elif action == "reset":
             self.reset()
             done = "reset"
@@ -6590,22 +6606,26 @@ class App:
 
     def toggle(self):
         if self.session.on:                     # (also while it's paused by itself)
-            self.recent.add("You paused")
+            # Stopping isn't only a break: the run going on is dropped, so the next EXP gain starts a new one.
+            self.recent.add("You stopped")
             self.session.pause()
-            self._set_start("Resume")
+            self._set_start(BTN_CONTINUE)
         else:
-            self.recent.add("You pressed Start")
+            # (only Reset takes the numbers back to zero: this carries them on)
+            self.recent.add("You continued" if self.tracker.elapsed() > 0 else "You pressed Start")
             self.session.start(time.monotonic())
             self.reader.request_map()           # read the map name now
-            self._set_start("Pause")
+            self._set_start(BTN_STOP)
         self.autolog.reset_clock()
         if self.tracker.exp is not None:
             self.status.set(self._status_for(""))   # right away, not at the next read
 
     def _set_start(self, text):
-        """The Start button: gold when pressing it starts something, quiet while it's running."""
+        """The tracking button: gold when pressing it starts something (Start, Continue), quiet while a run
+        is going (Stop). The icon follows the press: a triangle starts, a square stops."""
         self._start_text = text
-        self.view.set_start(text, "pause" if text == "Pause" else "play", "secondary" if text == "Pause" else "primary")
+        running = text == BTN_STOP
+        self.view.set_start(text, "stop" if running else "play", "secondary" if running else "primary")
 
     def reset(self):
         self.session.reset()
@@ -6617,7 +6637,7 @@ class App:
         self._stale_level = None
         self.skip_log = False
         self._show_skip_log()
-        self._set_start("Start")
+        self._set_start(BTN_START)
         # Also look for the minimap, inventory and party list again (e.g. after moving them).
         self.reader.look_again()
         self.map_name, self.party, self.party_read, self._party_seen = None, 1, False, (None, 0)

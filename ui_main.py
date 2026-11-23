@@ -19,8 +19,10 @@ SHAPE_W = {"square": W, "wide": 560, "bar": 720}
 # state -> (dot colour, glows)
 STRIP_KEYS = ("rate", "pct", "level", "eta", "eta_time", "mesos", "net", "tiles", "state", "state_text", "message", "no_reset")
 NO_RESET_GOLD = "#b89a4e"                 # the dim gold "No Reset" word in the Bar shape (it has no status pill)
+# "paused" is the overlay pausing itself (it carries on by itself); "stopped" is yours: you pressed Stop,
+# and the numbers on screen stay put until you press Continue.
 STATES = {"waiting": ("#6c7280", False), "ready": ("#ffcf4a", False), "tracking": ("#5fe39a", True),
-          "paused": ("#ffb27a", False), "alert": ("#ff7a5c", True)}
+          "paused": ("#ffb27a", False), "stopped": ("#9aa1b1", False), "alert": ("#ff7a5c", True)}
 
 
 MIN_TEXT_PX = 8                          # the smallest text, at any Size, so it stays readable
@@ -561,7 +563,7 @@ class Strip(tk.Frame):
             self._div = [c.create_line(0, y0 + g.px(14), 0, y0 + g.px(42), fill="#232733") for _ in range(2)]
             self._nr = c.create_text(0, y0 + g.px(31), anchor="w", text="", fill=NO_RESET_GOLD, font=theme.font("semibold", 10))
             self.pill = None
-        # buttons, from the right: settings, compact (back to full), Start/Pause
+        # buttons, from the right: settings, compact (back to full), Start / Stop
         mid = g.px(27) if wide else y0 + g.px(self.card_h / 2)
         right = g.px(self.W - SIDE)
         self.settings_btn = Button(c, theme, icon="gear", kind="ghost", width=34, height=34, radius=10, command=cb["settings"], tip="Settings", bg=bg)
@@ -569,12 +571,12 @@ class Strip(tk.Frame):
         c.create_window(right - g.px(17), mid, anchor="center", window=self.settings_btn)
         c.create_window(right - g.px(17 + 36), mid, anchor="center", window=self.compact_btn)
         if wide:
-            self.start_btn = Button(c, theme, text="Start", icon="play", kind="primary", width=104, height=34, radius=11, size=12,
+            self.start_btn = Button(c, theme, text="Start", icon="play", kind="primary", width=118, height=34, radius=11, size=12,
                                     weight="bold", command=cb["start"], bg=bg)
             c.create_window(right - g.px(17 + 36 + 8 + 52), mid, anchor="center", window=self.start_btn)
         else:
             self.start_btn = Button(c, theme, icon="play", kind="primary", width=34, height=34, radius=11, command=cb["start"],
-                                    tip="Start / Pause", bg=bg)
+                                    tip="Start / Stop", bg=bg)
             c.create_window(right - g.px(17 + 36 + 36 + 4), mid, anchor="center", window=self.start_btn)
         self.message = Message(self, theme, bg)
         self.message.grid(row=1, column=0, padx=g.px(SIDE + 2), pady=(g.px(2), g.px(10)), sticky="we")
@@ -822,7 +824,7 @@ class MainView(tk.Frame):
             self.cb["details"](self.details_open)
 
     def set_start(self, text, icon, kind):
-        """The Start/Pause button, here and on the sideways shapes."""
+        """The Start / Stop / Continue button, here and on the sideways shapes."""
         self.start_btn.set(text=text, icon=icon, kind=kind)
         self._start = (text, icon, kind)
         for st in self.strips.values():

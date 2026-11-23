@@ -18,6 +18,7 @@ The short version is in the [README](../README.md). This page has everything els
 4. **Press Start** and play normally. You only need to press it once:
    - It **pauses by itself** when you get no EXP for 15 seconds or leave the map, and carries on at your next EXP gain. Paused time doesn't count, so EXP/hr only covers your farming.
    - On a different map, the numbers start from zero for that map (unless **No Reset** is on, see the table below).
+   - **Stop** isn't a break: it ends the run the log is building, so your next EXP gain starts a new run. The numbers on screen stay, and **Continue** tracks on with them. Only **Reset** takes them back to zero.
 5. **Want mesos tracked?** Open your inventory (any tab) when you start, and now and then while you play. It doesn't have to stay open. If the overlay asks you to open it, do. Mesos you spend or move at a shop, storage or trade are left out, so only mesos you pick up count.
 6. **Want net mesos?** Keep the potions you use on the quick-slot bar. See [Net mesos and potions](#net-mesos-and-potions).
 
@@ -25,8 +26,8 @@ Within a few seconds it shows your level and how much EXP you have. The per-hour
 
 | Control | What it does |
 |---|---|
-| **Status pill** (top left) | Says what it's doing: tracking, paused, or what's wrong (for example it can't find the EXP bar) |
-| **Start / Pause / Resume** | Starts tracking. **Pause** stops it until you press **Resume**. |
+| **Status pill** (top left) | Says what it's doing: tracking, paused (it carries on by itself), stopped (you pressed Stop), or what's wrong (for example it can't find the EXP bar) |
+| **Start / Stop / Continue** | **Start** starts tracking. **Stop** ends the run going on: the numbers on screen stay, and the next EXP gain starts a new run. **Continue** tracks on with those numbers. Only **Reset** zeroes them |
 | **Reset** (the round arrow) | Starts a new session from zero, and looks for the minimap, inventory and party list again (handy after moving them around) |
 | **Log this run** (switch) | Turn it off to keep the current run out of the log, for example while you're testing a map or waiting for your party. Everything is still shown on screen. It turns itself back on when you leave the map or stop getting EXP, so your next run is logged as usual. |
 | **No Reset** (switch) | For farming that moves between maps: changing maps no longer pauses or starts new numbers (a break with no EXP still pauses). It stays on until you turn it off. Runs made with it on stay on your PC: they're never shared with the best-maps site. |
@@ -34,7 +35,7 @@ Within a few seconds it shows your level and how much EXP you have. The per-hour
 | **...** (More) | **Select area** lets you drag a box around the EXP numbers, if it ever can't find them (it then turns into **Follow game**, which goes back to finding them by itself). **View capture** shows exactly what it read from your screen. |
 | **Best maps** | Opens the [best-maps website](#best-maps-for-your-class), already showing maps for your level, party size and class |
 | **Log icon** | Opens and closes the log |
-| **Compact icon** | A much smaller window with the main numbers and Start/Pause, in the [shape](#compact-shapes) you chose. Click it again to bring everything back. Shift+4 or double-clicking the big number does the same. |
+| **Compact icon** | A much smaller window with the main numbers and Start/Stop, in the [shape](#compact-shapes) you chose. Click it again to bring everything back. Shift+4 or double-clicking the big number does the same. |
 | **Gear icon** | Settings |
 
 ## Compact shapes
@@ -43,7 +44,7 @@ Compact mode comes in three shapes. Your first launch asks which you want, and y
 
 ![The three compact shapes: Square, Wide and Bar](screenshot-compact.png)
 
-- **Square:** the narrow card, with the big EXP/hr number, mesos/hr, the level bar and Start/Pause.
+- **Square:** the narrow card, with the big EXP/hr number, mesos/hr, the level bar and Start/Stop.
 - **Wide:** longer sideways, with the level bar on top and four numbers in a row: EXP/hr, last 5 minutes, mesos/hr and the time to your next level.
 - **Bar:** one thin strip with EXP/hr, mesos/hr, the time to your next level and a slim level bar. It shows a status line only when something needs your attention.
 
@@ -53,13 +54,13 @@ They work while MapleStory (or the overlay) is the window in front, so you don't
 
 | Keys | What they do |
 |---|---|
-| **Shift+1** | Start / Pause |
+| **Shift+1** | Start / Stop |
 | **Shift+2** | Reset |
 | **Shift+3** | Log this run on / off |
 | **Shift+4** | Compact / Full |
 | (none by default) | No Reset on / off: set a key for it in ⚙ |
 
-The status line says what happened, for example "Shift+1: paused." While the hotkeys are on, those keys go to the overlay only, so Shift+1 won't type **!** in the game's chat. If that gets in your way, change them (or turn them off) in ⚙: click one, then press the keys you want (click it again, or press Esc, to cancel). Backspace turns one off.
+The status line says what happened, for example "Shift+1: stopped" (or "continued", when it carries on with the numbers on screen). While the hotkeys are on, those keys go to the overlay only, so Shift+1 won't type **!** in the game's chat. If that gets in your way, change them (or turn them off) in ⚙: click one, then press the keys you want (click it again, or press Esc, to cancel). Backspace turns one off.
 
 ## The log
 
@@ -133,7 +134,7 @@ Mesos/hr is what you pick up. **Net mesos/hr** takes off what the potions you dr
 ![The best-maps website, with a map's details open](screenshot-site.png)
 
 - **It's built from clean 15-minute runs:** 15 minutes of non-stop farming on one map with the same party size. The log shows your progress ("15-min run: 7 of 15 min"). For the site, 15 seconds without EXP ends a run (whatever your log's setting), a run where a shop, storage or trade window was open is never shared, and a run is shared only once the overlay has read your party size.
-- **Mesos only when they can be trusted:** a run is sent with mesos only if you looked at your inventory at the start and within 30 seconds after the end. Otherwise it is sent with EXP only. If you pause right after a run, the overlay may ask you to open the inventory.
+- **Mesos only when they can be trusted:** a run is sent with mesos only if you looked at your inventory at the start and within 30 seconds after the end. Otherwise it is sent with EXP only. If you stop right after a run, the overlay may ask you to open the inventory.
 - **Sharing is your choice.** The first time you start the overlay, it asks whether to share your runs. You can change it any time in ⚙.
 - **What's shared:** the map, your level, class and party size, the EXP and mesos you got (EXP only if the mesos couldn't be trusted), and a random ID for your copy of the overlay. Never your character's name, and never anything about potions.
 - **Keeping it honest:** the site uses the typical (median) run, counts each player once, leaves out runs far from what other players get there, a new player's runs only count after 24 hours and 4 runs, and a map is only ranked once 3 different players have farmed it (before that, it's early data: hidden unless you untick **Hide early data**, and greyed out). Every player's typical run is a dot on the chart, so anything odd is easy to spot.

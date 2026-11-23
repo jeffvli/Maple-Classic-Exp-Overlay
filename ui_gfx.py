@@ -248,6 +248,8 @@ class Gfx:
             elif name == "pause":
                 d.rounded_rectangle((6 * u, 4.5 * u, 10.4 * u, 19.5 * u), 1.6 * u, fill=255)
                 d.rounded_rectangle((13.6 * u, 4.5 * u, 18 * u, 19.5 * u), 1.6 * u, fill=255)
+            elif name == "stop":
+                d.rounded_rectangle((5.4 * u, 5.4 * u, 18.6 * u, 18.6 * u), 2.4 * u, fill=255)
             elif name == "reset":
                 d.arc((4 * u, 4 * u, 20 * u, 20 * u), 225, 150, fill=255, width=lw)
                 hx, hy = 12 + 8 * math.cos(math.radians(225)), 12 + 8 * math.sin(math.radians(225))

@@ -2,6 +2,11 @@
 
 ## 0.9.16-beta
 
+**Clearer words on the main button**
+- It used to say **Pause**, which was misleading: pressing it never just paused. It ends the run the log is building, so your next EXP gain starts a new run. It now says **Start**, **Stop** and **Continue**, with a square icon for Stop and a triangle for the rest.
+- **Continue** keeps the numbers on screen and tracks on with them (only **Reset** takes them back to zero), and the status line says so: "Stopped. Your numbers are kept. Press Continue to track again — the next EXP gain starts a new run."
+- The status pill tells the two apart: **Stopped** (grey) is yours; **Paused** (orange) is the overlay pausing itself after no EXP, leaving the map, or losing the minimap's name, which carries on by itself at your next EXP gain. Shift+1 is now "Start / Stop".
+
 **No Reset**
 - A new switch, **No Reset**, next to Log this run (also in Settings, and as a hotkey you can set; it has no key by default). It's for farming that moves between maps: changing maps no longer pauses or starts new numbers. A break with no EXP still pauses as usual, and the numbers carry on after it. The status pill says "· No Reset" while it's on.
 - A log line made with it on names every map it covered ("Map A/Map B"). A 15-minute run with No Reset on at any moment counts in your log but stays on your PC: it's never shared with the best-maps site.

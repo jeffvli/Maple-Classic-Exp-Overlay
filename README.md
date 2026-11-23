@@ -45,12 +45,12 @@ Hotkeys aren't available on macOS yet.
 
 1. **Start MapleStory**, then the overlay. It finds the game window by itself.
 2. **Don't cover** the minimap, the EXP bar, the mesos at the bottom of your inventory or the party list with the overlay. It tells you if it's in the way.
-3. **Press Start** and play. It pauses by itself after 15 seconds without EXP or when you leave the map, and carries on at your next EXP. A new map starts new numbers (unless **No Reset** is on).
+3. **Press Start** and play. It pauses by itself after 15 seconds without EXP or when you leave the map, and carries on at your next EXP. A new map starts new numbers (unless **No Reset** is on). **Stop** is not a break: it ends the run going on, so the next EXP gain starts a new one (the numbers on screen stay, and **Continue** tracks on with them).
 4. **For mesos,** open your inventory when you start and now and then. **For net mesos,** keep your potions on the quick-slot bar.
 
 | Control | What it does |
 |---|---|
-| **Start / Pause** | Starts and stops tracking |
+| **Start / Stop / Continue** | **Start** tracks. **Stop** ends the run going on (the numbers on screen stay). **Continue** tracks on with those numbers, and the next EXP gain starts a new run. Only **Reset** takes them back to zero |
 | **Reset** (round arrow) | Starts over from zero |
 | **Log this run** | Turn it off to keep this run out of the log. It turns itself back on after the run. |
 | **No Reset** | For farming across maps: changing maps doesn't start new numbers. These runs stay on your PC. |
@@ -58,7 +58,7 @@ Hotkeys aren't available on macOS yet.
 | **...** (More) | **View capture** shows what it read; **Select area** if it can't find the EXP numbers |
 | Log, compact and ⚙ icons | The log, a smaller window (Square, Wide or Bar), and Settings |
 
-Hotkeys (Windows): **Shift+1** Start/Pause, **Shift+2** Reset, **Shift+3** Log this run, **Shift+4** Compact. Change them in ⚙.
+Hotkeys (Windows): **Shift+1** Start/Stop, **Shift+2** Reset, **Shift+3** Log this run, **Shift+4** Compact. Change them in ⚙.
 
 **More:** the [full guide](docs/guide.md) has the log, compact shapes, hotkeys, every setting, net mesos and potions, the best-maps site and how accurate it is.
 
